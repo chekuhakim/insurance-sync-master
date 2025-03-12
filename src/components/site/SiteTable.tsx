@@ -18,29 +18,30 @@ const SiteTable = () => {
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  
+
   useEffect(() => {
     fetchSites();
     fetchInsuranceGroups();
   }, []);
-  
+
   const fetchSites = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('sites')
-        .select('*');
-      
+        .select('*')
+        .eq('user_id', user?.id); // Filter by user if applicable
+
       if (error) throw error;
-      
+
       const formattedSites: Site[] = data.map((site, index) => ({
         id: index + 1,
         name: site.name,
         address: site.address,
         insuranceGroupId: site.insurance_group_id ? parseInt(site.insurance_group_id.toString().replace(/\D/g, '').slice(-1)) : 0,
-        originalId: site.id // This is now valid with the updated Site type
+        originalId: site.id,
       }));
-      
+
       setSites(formattedSites);
     } catch (error: any) {
       console.error('Error fetching sites:', error);
@@ -49,92 +50,101 @@ const SiteTable = () => {
       setLoading(false);
     }
   };
-  
+
   const fetchInsuranceGroups = async () => {
     try {
       const { data, error } = await supabase
         .from('insurance_groups')
-        .select('*');
-      
+        .select('*')
+        .eq('user_id', user?.id); // Filter by user if applicable
+
       if (error) throw error;
-      
+
       const formattedGroups: InsuranceGroup[] = data.map((group, index) => ({
         id: index + 1,
         provider: group.provider,
         endDate: new Date(group.end_date),
-        originalId: group.id // This is now valid with the updated InsuranceGroup type
+        originalId: group.id,
       }));
-      
+
       setInsuranceGroups(formattedGroups);
     } catch (error: any) {
       console.error('Error fetching insurance groups:', error);
       toast.error('Failed to load insurance groups');
     }
   };
-  
+
   const handleSave = async (site: Site) => {
     try {
       if (editingSite) {
+        console.log('Updating site:', site);
         const { error } = await supabase
           .from('sites')
           .update({
             name: site.name,
             address: site.address,
             insurance_group_id: site.insuranceGroupId ? 
-              insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null
+              insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null,
+            user_id: user?.id || null,
           })
           .eq('id', editingSite.originalId);
-        
-        if (error) throw error;
-        
-        setSites(sites.map(s => s.id === site.id ? {
-          ...site,
-          originalId: editingSite.originalId // Preserve the originalId
-        } : s));
-        
+
+        if (error) {
+          console.error('Update error:', error.message, error.details);
+          throw error;
+        }
+
+        setSites(sites.map(s => s.id === site.id ? { ...site, originalId: editingSite.originalId } : s));
+        await fetchSites(); // Refetch to ensure consistency
         toast.success('Site updated successfully');
       } else {
+        console.log('Inserting new site:', {
+          name: site.name,
+          address: site.address,
+          insurance_group_id: site.insuranceGroupId ? 
+            insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null,
+          user_id: user?.id || null,
+        });
         const { data, error } = await supabase
           .from('sites')
           .insert({
             name: site.name,
             address: site.address,
             insurance_group_id: site.insuranceGroupId ? 
-              insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null
+              insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null,
+            user_id: user?.id || null,
           })
           .select();
-        
-        if (error) throw error;
-        
-        const newId = Math.max(0, ...sites.map(s => s.id)) + 1;
-        setSites([...sites, { 
-          ...site, 
-          id: newId,
-          originalId: data[0].id // Add the new Supabase UUID
-        }]);
-        
+
+        if (error) {
+          console.error('Insert error:', error.message, error.details);
+          throw error;
+        }
+
+        console.log('Insert successful, new data:', data);
+        await fetchSites(); // Refetch to update the table
         toast.success('Site added successfully');
       }
     } catch (error: any) {
-      console.error('Error saving site:', error);
-      toast.error('Failed to save site');
+      console.error('Error saving site:', error.message, error.details);
+      toast.error('Failed to save site: ' + error.message);
     } finally {
       setEditingSite(null);
     }
   };
-  
+
   const handleDelete = async (id: number) => {
     try {
       const siteToDelete = sites.find(site => site.id === id);
       if (!siteToDelete || !siteToDelete.originalId) return;
-      
+
       const { error } = await supabase
         .from('sites')
         .delete()
         .eq('id', siteToDelete.originalId);
-      
+
       if (error) throw error;
-      
+
       setSites(sites.filter(site => site.id !== id));
       toast.success('Site deleted successfully');
     } catch (error: any) {
@@ -144,14 +154,14 @@ const SiteTable = () => {
       setIsDeleting(null);
     }
   };
-  
+
   const getSiteInsuranceGroup = (siteId: number) => {
     const site = sites.find(s => s.id === siteId);
     if (!site) return null;
-    
+
     return insuranceGroups.find(group => group.id === site.insuranceGroupId);
   };
-  
+
   const columns = [
     {
       header: "Site Name",
@@ -176,10 +186,10 @@ const SiteTable = () => {
       accessorKey: (row: Site) => {
         const group = getSiteInsuranceGroup(row.id);
         if (!group) return "—";
-        
+
         const dateStr = formatDate(group.endDate);
         const expiring = isExpiringSoon(group.endDate);
-        
+
         return (
           <div className="flex items-center gap-2">
             {expiring ? (
@@ -208,16 +218,17 @@ const SiteTable = () => {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Edit Site</DialogTitle>
+                <DialogTitle>{editingSite ? 'Edit Site' : 'Add Site'}</DialogTitle>
               </DialogHeader>
               <SiteForm 
-                site={row} 
+                site={editingSite} 
                 insuranceGroups={insuranceGroups}
                 onSave={handleSave}
+                onClose={() => setEditingSite(null)}
               />
             </DialogContent>
           </Dialog>
-          
+
           <Dialog open={isDeleting === row.id} onOpenChange={(open) => !open && setIsDeleting(null)}>
             <DialogTrigger asChild>
               <Button 
@@ -276,11 +287,12 @@ const SiteTable = () => {
             <SiteForm 
               insuranceGroups={insuranceGroups}
               onSave={handleSave}
+              onClose={() => setEditingSite(null)}
             />
           </DialogContent>
         </Dialog>
       </div>
-      
+
       <DataTable 
         data={sites}
         columns={columns}
