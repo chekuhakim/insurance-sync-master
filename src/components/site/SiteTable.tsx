@@ -29,8 +29,7 @@ const SiteTable = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('sites')
-        .select('*')
-        .eq('user_id', user?.id); // Filter by user if applicable
+        .select('*');
 
       if (error) throw error;
 
@@ -55,8 +54,7 @@ const SiteTable = () => {
     try {
       const { data, error } = await supabase
         .from('insurance_groups')
-        .select('*')
-        .eq('user_id', user?.id); // Filter by user if applicable
+        .select('*');
 
       if (error) throw error;
 
@@ -85,7 +83,6 @@ const SiteTable = () => {
             address: site.address,
             insurance_group_id: site.insuranceGroupId ? 
               insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null,
-            user_id: user?.id || null,
           })
           .eq('id', editingSite.originalId);
 
@@ -95,7 +92,7 @@ const SiteTable = () => {
         }
 
         setSites(sites.map(s => s.id === site.id ? { ...site, originalId: editingSite.originalId } : s));
-        await fetchSites(); // Refetch to ensure consistency
+        await fetchSites();
         toast.success('Site updated successfully');
       } else {
         console.log('Inserting new site:', {
@@ -103,7 +100,6 @@ const SiteTable = () => {
           address: site.address,
           insurance_group_id: site.insuranceGroupId ? 
             insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null,
-          user_id: user?.id || null,
         });
         const { data, error } = await supabase
           .from('sites')
@@ -112,7 +108,6 @@ const SiteTable = () => {
             address: site.address,
             insurance_group_id: site.insuranceGroupId ? 
               insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null,
-            user_id: user?.id || null,
           })
           .select();
 
@@ -122,7 +117,7 @@ const SiteTable = () => {
         }
 
         console.log('Insert successful, new data:', data);
-        await fetchSites(); // Refetch to update the table
+        await fetchSites();
         toast.success('Site added successfully');
       }
     } catch (error: any) {
