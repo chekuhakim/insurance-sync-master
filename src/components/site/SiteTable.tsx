@@ -18,11 +18,14 @@ const SiteTable = () => {
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-
-  useEffect(() => {
-    fetchSites();
-    fetchInsuranceGroups();
-  }, []);
+  
+useEffect(() => {
+  const fetchData = async () => {
+    await fetchInsuranceGroups(); // Fetch insurance groups first
+    await fetchSites(); // Then fetch sites
+  };
+  fetchData();
+}, []);
 
   const fetchSites = async () => {
     try {
