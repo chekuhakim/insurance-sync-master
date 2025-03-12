@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password,
         options: {
           data: {
+            username: email, // Use email as username to satisfy the not-null constraint
             email
           }
         }
@@ -57,6 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       navigate('/auth');
     } catch (error: any) {
       toast.error(error.message || 'An error occurred during sign up');
+      console.error('Sign up error:', error);
     } finally {
       setLoading(false);
     }
@@ -75,6 +77,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       navigate('/');
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in');
+      console.error('Sign in error:', error);
     } finally {
       setLoading(false);
     }
@@ -88,6 +91,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       navigate('/auth');
     } catch (error: any) {
       toast.error(error.message || 'Error signing out');
+      console.error('Sign out error:', error);
     } finally {
       setLoading(false);
     }
