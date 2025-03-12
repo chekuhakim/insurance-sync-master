@@ -9,7 +9,113 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      insurance_groups: {
+        Row: {
+          created_at: string | null
+          end_date: string
+          id: string
+          provider: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date: string
+          id?: string
+          provider: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string
+          id?: string
+          provider?: string
+        }
+        Relationships: []
+      }
+      insurance_requests: {
+        Row: {
+          address: string
+          created_at: string | null
+          id: string
+          insurance_type: string
+          request_date: string | null
+          site_name: string
+          special_details: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          address: string
+          created_at?: string | null
+          id?: string
+          insurance_type: string
+          request_date?: string | null
+          site_name: string
+          special_details?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          address?: string
+          created_at?: string | null
+          id?: string
+          insurance_type?: string
+          request_date?: string | null
+          site_name?: string
+          special_details?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      sites: {
+        Row: {
+          address: string
+          created_at: string | null
+          id: string
+          insurance_group_id: string | null
+          name: string
+        }
+        Insert: {
+          address: string
+          created_at?: string | null
+          id?: string
+          insurance_group_id?: string | null
+          name: string
+        }
+        Update: {
+          address?: string
+          created_at?: string | null
+          id?: string
+          insurance_group_id?: string | null
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_insurance_group"
+            columns: ["insurance_group_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
