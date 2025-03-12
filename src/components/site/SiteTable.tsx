@@ -1,34 +1,160 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Plus, Pencil, Trash } from "lucide-react";
-import { Site, InsuranceGroup, formatDate, isExpiringSoon, mockSites, mockInsuranceGroups, getSiteInsuranceGroup } from "@/lib/data";
+import { Site, InsuranceGroup, formatDate, isExpiringSoon } from "@/lib/data";
 import SiteForm from "./SiteForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 const SiteTable = () => {
-  const [sites, setSites] = useState<Site[]>(mockSites);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [insuranceGroups, setInsuranceGroups] = useState<InsuranceGroup[]>([]);
   const [editingSite, setEditingSite] = useState<Site | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   
-  const handleSave = (site: Site) => {
-    if (editingSite) {
-      // Update existing site
-      setSites(sites.map(s => s.id === site.id ? site : s));
-    } else {
-      // Add new site with a generated ID
-      const newId = Math.max(0, ...sites.map(s => s.id)) + 1;
-      setSites([...sites, { ...site, id: newId }]);
+  useEffect(() => {
+    fetchSites();
+    fetchInsuranceGroups();
+  }, []);
+  
+  const fetchSites = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('sites')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Convert Supabase UUID to numeric IDs for compatibility with existing code
+      const formattedSites = data.map((site, index) => ({
+        id: index + 1,
+        name: site.name,
+        address: site.address,
+        insuranceGroupId: site.insurance_group_id ? parseInt(site.insurance_group_id.toString().replace(/\D/g, '').slice(-1)) : 0,
+        originalId: site.id // Keep the original UUID for Supabase operations
+      }));
+      
+      setSites(formattedSites);
+    } catch (error: any) {
+      console.error('Error fetching sites:', error);
+      toast.error('Failed to load sites');
+    } finally {
+      setLoading(false);
     }
-    setEditingSite(null);
   };
   
-  const handleDelete = (id: number) => {
-    setSites(sites.filter(site => site.id !== id));
-    setIsDeleting(null);
+  const fetchInsuranceGroups = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('insurance_groups')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Convert Supabase data to the format expected by the application
+      const formattedGroups = data.map((group, index) => ({
+        id: index + 1,
+        provider: group.provider,
+        endDate: new Date(group.end_date),
+        originalId: group.id // Keep the original UUID for Supabase operations
+      }));
+      
+      setInsuranceGroups(formattedGroups);
+    } catch (error: any) {
+      console.error('Error fetching insurance groups:', error);
+      toast.error('Failed to load insurance groups');
+    }
+  };
+  
+  const handleSave = async (site: Site) => {
+    try {
+      if (editingSite) {
+        // Update existing site
+        const { error } = await supabase
+          .from('sites')
+          .update({
+            name: site.name,
+            address: site.address,
+            insurance_group_id: site.insuranceGroupId ? 
+              insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null
+          })
+          .eq('id', editingSite.originalId);
+        
+        if (error) throw error;
+        
+        setSites(sites.map(s => s.id === site.id ? {
+          ...site,
+          originalId: editingSite.originalId
+        } : s));
+        
+        toast.success('Site updated successfully');
+      } else {
+        // Add new site
+        const { data, error } = await supabase
+          .from('sites')
+          .insert({
+            name: site.name,
+            address: site.address,
+            insurance_group_id: site.insuranceGroupId ? 
+              insuranceGroups.find(g => g.id === site.insuranceGroupId)?.originalId : null
+          })
+          .select();
+        
+        if (error) throw error;
+        
+        const newId = Math.max(0, ...sites.map(s => s.id)) + 1;
+        setSites([...sites, { 
+          ...site, 
+          id: newId,
+          originalId: data[0].id
+        }]);
+        
+        toast.success('Site added successfully');
+      }
+    } catch (error: any) {
+      console.error('Error saving site:', error);
+      toast.error('Failed to save site');
+    } finally {
+      setEditingSite(null);
+    }
+  };
+  
+  const handleDelete = async (id: number) => {
+    try {
+      const siteToDelete = sites.find(site => site.id === id);
+      if (!siteToDelete) return;
+      
+      const { error } = await supabase
+        .from('sites')
+        .delete()
+        .eq('id', siteToDelete.originalId);
+      
+      if (error) throw error;
+      
+      setSites(sites.filter(site => site.id !== id));
+      toast.success('Site deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting site:', error);
+      toast.error('Failed to delete site');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+  
+  const getSiteInsuranceGroup = (siteId: number) => {
+    const site = sites.find(s => s.id === siteId);
+    if (!site) return null;
+    
+    return insuranceGroups.find(group => group.id === site.insuranceGroupId);
   };
   
   const columns = [
@@ -91,7 +217,7 @@ const SiteTable = () => {
               </DialogHeader>
               <SiteForm 
                 site={row} 
-                insuranceGroups={mockInsuranceGroups}
+                insuranceGroups={insuranceGroups}
                 onSave={handleSave}
               />
             </DialogContent>
@@ -153,7 +279,7 @@ const SiteTable = () => {
               <DialogTitle>Add New Site</DialogTitle>
             </DialogHeader>
             <SiteForm 
-              insuranceGroups={mockInsuranceGroups}
+              insuranceGroups={insuranceGroups}
               onSave={handleSave}
             />
           </DialogContent>

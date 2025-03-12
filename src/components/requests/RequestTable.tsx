@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,33 +7,106 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InsuranceRequest, formatDate, mockRequests } from "@/lib/data";
-import { CheckCircle, XCircle, FileText, AlertCircle } from "lucide-react";
+import { formatDate } from "@/lib/data";
+import { CheckCircle, XCircle, FileText, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+type InsuranceRequest = {
+  id: string;
+  siteName: string;
+  address: string;
+  insuranceType: "Normal" | "Special";
+  specialDetails?: string;
+  requestDate: Date;
+  status: "Pending" | "Approved" | "Denied";
+  originalId?: string;
+};
 
 const RequestTable = () => {
-  const [requests, setRequests] = useState<InsuranceRequest[]>(mockRequests);
+  const [requests, setRequests] = useState<InsuranceRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<InsuranceRequest | null>(null);
   const [denialReason, setDenialReason] = useState("");
   const [showApproval, setShowApproval] = useState(false);
   const [showDenial, setShowDenial] = useState(false);
-  const [viewingDetails, setViewingDetails] = useState<number | null>(null);
+  const [viewingDetails, setViewingDetails] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  const handleApprove = (request: InsuranceRequest) => {
-    setRequests(
-      requests.map((r) => r.id === request.id ? { ...r, status: "Approved" } : r)
-    );
-    setShowApproval(false);
-    toast.success(`Request #${request.id} has been approved`);
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+  
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('insurance_requests')
+        .select('*');
+      
+      if (error) throw error;
+      
+      // Convert Supabase data to the format expected by the application
+      const formattedRequests = data.map(request => ({
+        id: request.id,
+        siteName: request.site_name,
+        address: request.address,
+        insuranceType: request.insurance_type as "Normal" | "Special",
+        specialDetails: request.special_details || undefined,
+        requestDate: new Date(request.request_date || new Date()),
+        status: request.status as "Pending" | "Approved" | "Denied",
+      }));
+      
+      setRequests(formattedRequests);
+    } catch (error: any) {
+      console.error('Error fetching requests:', error);
+      toast.error('Failed to load insurance requests');
+    } finally {
+      setLoading(false);
+    }
   };
   
-  const handleDeny = (request: InsuranceRequest) => {
-    setRequests(
-      requests.map((r) => r.id === request.id ? { ...r, status: "Denied" } : r)
-    );
-    setShowDenial(false);
-    setDenialReason("");
-    toast.success(`Request #${request.id} has been denied`);
+  const handleApprove = async (request: InsuranceRequest) => {
+    try {
+      const { error } = await supabase
+        .from('insurance_requests')
+        .update({ status: 'Approved' })
+        .eq('id', request.id);
+      
+      if (error) throw error;
+      
+      setRequests(
+        requests.map((r) => r.id === request.id ? { ...r, status: "Approved" } : r)
+      );
+      setShowApproval(false);
+      toast.success(`Request #${request.id} has been approved`);
+    } catch (error: any) {
+      console.error('Error approving request:', error);
+      toast.error('Failed to approve request');
+    }
+  };
+  
+  const handleDeny = async (request: InsuranceRequest) => {
+    try {
+      const { error } = await supabase
+        .from('insurance_requests')
+        .update({ 
+          status: 'Denied',
+          special_details: denialReason || request.specialDetails || null
+        })
+        .eq('id', request.id);
+      
+      if (error) throw error;
+      
+      setRequests(
+        requests.map((r) => r.id === request.id ? { ...r, status: "Denied" } : r)
+      );
+      setShowDenial(false);
+      setDenialReason("");
+      toast.success(`Request #${request.id} has been denied`);
+    } catch (error: any) {
+      console.error('Error denying request:', error);
+      toast.error('Failed to deny request');
+    }
   };
   
   const getStatusBadge = (status: InsuranceRequest["status"]) => {
@@ -181,13 +254,20 @@ const RequestTable = () => {
         </div>
       </div>
       
-      <DataTable 
-        data={requests}
-        columns={columns}
-        keyField="id"
-        searchPlaceholder="Search requests..."
-        searchFields={["id", "siteName", "address", "insuranceType"]}
-      />
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2 text-lg">Loading requests...</span>
+        </div>
+      ) : (
+        <DataTable 
+          data={requests}
+          columns={columns}
+          keyField="id"
+          searchPlaceholder="Search requests..."
+          searchFields={["id", "siteName", "address", "insuranceType"]}
+        />
+      )}
       
       {/* Approval Dialog */}
       <Dialog open={showApproval} onOpenChange={setShowApproval}>

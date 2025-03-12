@@ -6,16 +6,23 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
-import { InsuranceRequest, CURRENT_DATE, mockRequests } from "@/lib/data";
+import { CURRENT_DATE } from "@/lib/data";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 interface RequestFormProps {
-  onSubmit?: (request: InsuranceRequest) => void;
+  onSubmit?: (request: any) => void;
 }
 
 const RequestForm = ({ onSubmit }: RequestFormProps) => {
-  const [formData, setFormData] = useState<Omit<InsuranceRequest, "id" | "requestDate" | "status">>({
+  const [formData, setFormData] = useState<{
+    siteName: string;
+    address: string;
+    insuranceType: "Normal" | "Special";
+    specialDetails?: string;
+  }>({
     siteName: "",
     address: "",
     insuranceType: "Normal",
@@ -29,6 +36,7 @@ const RequestForm = ({ onSubmit }: RequestFormProps) => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const { user } = useAuth();
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -58,34 +66,37 @@ const RequestForm = ({ onSubmit }: RequestFormProps) => {
     return !Object.values(newErrors).some(error => error);
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validate()) return;
     
     setIsSubmitting(true);
     
-    // Simulate API call with timeout
-    setTimeout(() => {
-      const newId = Math.max(0, ...mockRequests.map(r => r.id)) + 1;
-      const newRequest: InsuranceRequest = {
-        id: newId,
-        siteName: formData.siteName,
+    try {
+      const newRequest = {
+        site_name: formData.siteName,
         address: formData.address,
-        insuranceType: formData.insuranceType,
-        specialDetails: formData.specialDetails,
-        requestDate: CURRENT_DATE,
+        insurance_type: formData.insuranceType,
+        special_details: formData.specialDetails || null,
+        request_date: new Date().toISOString(),
         status: "Pending",
+        user_id: user?.id || null
       };
       
-      if (onSubmit) {
-        onSubmit(newRequest);
-      }
+      const { data, error } = await supabase
+        .from('insurance_requests')
+        .insert(newRequest)
+        .select();
       
-      setIsSubmitting(false);
+      if (error) throw error;
+      
       setIsSuccess(true);
+      toast.success(`Request submitted successfully!`);
       
-      toast.success(`Request submitted successfully! Request ID: ${newId}`);
+      if (onSubmit && data) {
+        onSubmit(data[0]);
+      }
       
       // Reset form after successful submission
       setTimeout(() => {
@@ -97,7 +108,12 @@ const RequestForm = ({ onSubmit }: RequestFormProps) => {
         });
         setIsSuccess(false);
       }, 2000);
-    }, 1500);
+    } catch (error: any) {
+      console.error('Error submitting request:', error);
+      toast.error('Failed to submit request');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
