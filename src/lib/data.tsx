@@ -1,4 +1,3 @@
-
 import { format, addDays } from "date-fns";
 
 // Current date - using March 11, 2025 as specified in the requirements
@@ -10,12 +9,14 @@ export type Site = {
   name: string;
   address: string;
   insuranceGroupId: number;
+  originalId?: string; // Added to store Supabase UUID
 };
 
 export type InsuranceGroup = {
   id: number;
   provider: string;
   endDate: Date;
+  originalId?: string; // Added to store Supabase UUID
 };
 
 export type InsuranceRequest = {
@@ -39,7 +40,7 @@ export const getDaysUntil = (date: Date) => {
 };
 
 export const isExpiringSoon = (date: Date) => {
-  return getDaysUntil(date) <= 30;
+  return getDaysUntil(date) <= 30 && getDaysUntil(date) >= 0; // Updated to ensure not expired
 };
 
 // Mock data
@@ -48,26 +49,31 @@ export const mockInsuranceGroups: InsuranceGroup[] = [
     id: 1,
     provider: "Allianz",
     endDate: new Date("2025-12-31"),
+    originalId: "group-uuid-1", // Example UUID for testing
   },
   {
     id: 2,
     provider: "State Farm",
     endDate: new Date("2025-04-15"),
+    originalId: "group-uuid-2",
   },
   {
     id: 3,
     provider: "AIG",
     endDate: new Date("2025-03-25"),
+    originalId: "group-uuid-3",
   },
   {
     id: 4,
     provider: "Zurich",
     endDate: new Date("2026-03-11"),
+    originalId: "group-uuid-4",
   },
   {
     id: 5,
     provider: "Prudential",
     endDate: new Date("2025-05-20"),
+    originalId: "group-uuid-5",
   },
 ];
 
@@ -77,30 +83,35 @@ export const mockSites: Site[] = [
     name: "Downtown Warehouse",
     address: "123 Main St, New York, NY",
     insuranceGroupId: 1,
+    originalId: "site-uuid-1", // Example UUID for testing
   },
   {
     id: 2,
     name: "East Coast Distribution Center",
     address: "456 Commerce Ave, Boston, MA",
     insuranceGroupId: 2,
+    originalId: "site-uuid-2",
   },
   {
     id: 3,
     name: "West Side Factory",
     address: "789 Industrial Blvd, Chicago, IL",
     insuranceGroupId: 3,
+    originalId: "site-uuid-3",
   },
   {
     id: 4,
     name: "New Factory",
     address: "456 Oak Rd, Seattle, WA",
     insuranceGroupId: 4,
+    originalId: "site-uuid-4",
   },
   {
     id: 5,
     name: "Storage Facility",
     address: "101 Container Way, Miami, FL",
     insuranceGroupId: 5,
+    originalId: "site-uuid-5",
   },
 ];
 
