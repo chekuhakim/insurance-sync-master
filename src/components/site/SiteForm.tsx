@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,68 +9,81 @@ interface SiteFormProps {
   site?: Site;
   insuranceGroups: InsuranceGroup[];
   onSave: (site: Site) => void;
+  onClose?: () => void; // Optional prop to close the modal
 }
 
-const SiteForm = ({ site, insuranceGroups, onSave }: SiteFormProps) => {
+const SiteForm = ({ site, insuranceGroups, onSave, onClose }: SiteFormProps) => {
   const [formData, setFormData] = useState<Omit<Site, "id"> & { id?: number }>({
     name: "",
     address: "",
     insuranceGroupId: 0,
   });
-  
+
   const [errors, setErrors] = useState({
     name: "",
     address: "",
     insuranceGroupId: "",
   });
-  
+
   useEffect(() => {
     if (site) {
       setFormData(site);
     }
   }, [site]);
-  
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when field is edited
     if (errors[name as keyof typeof errors]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
-  
+
   const handleSelectChange = (value: string) => {
     setFormData(prev => ({ ...prev, insuranceGroupId: parseInt(value) }));
-    // Clear error when field is edited
     if (errors.insuranceGroupId) {
       setErrors(prev => ({ ...prev, insuranceGroupId: "" }));
     }
   };
-  
+
   const validate = () => {
     const newErrors = {
       name: formData.name ? "" : "Site name is required",
       address: formData.address ? "" : "Address is required",
       insuranceGroupId: formData.insuranceGroupId ? "" : "Please select an insurance group",
     };
-    
+
     setErrors(newErrors);
     return !Object.values(newErrors).some(error => error);
   };
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validate()) return;
-    
+
     onSave({
-      id: site?.id || 0, // Will be replaced with generated ID if this is a new site
+      id: site?.id || 0,
       name: formData.name,
       address: formData.address,
       insuranceGroupId: formData.insuranceGroupId,
     });
+
+    // Reset form after successful submission
+    setFormData({
+      name: "",
+      address: "",
+      insuranceGroupId: 0,
+    });
+    setErrors({
+      name: "",
+      address: "",
+      insuranceGroupId: "",
+    });
+
+    if (onClose) onClose(); // Close the modal if provided
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
@@ -86,7 +98,7 @@ const SiteForm = ({ site, insuranceGroups, onSave }: SiteFormProps) => {
         />
         {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="address">Address</Label>
         <Input
@@ -99,7 +111,7 @@ const SiteForm = ({ site, insuranceGroups, onSave }: SiteFormProps) => {
         />
         {errors.address && <p className="text-sm text-destructive">{errors.address}</p>}
       </div>
-      
+
       <div className="space-y-2">
         <Label htmlFor="insuranceGroupId">Insurance Group</Label>
         <Select
@@ -119,7 +131,7 @@ const SiteForm = ({ site, insuranceGroups, onSave }: SiteFormProps) => {
         </Select>
         {errors.insuranceGroupId && <p className="text-sm text-destructive">{errors.insuranceGroupId}</p>}
       </div>
-      
+
       <div className="flex justify-end gap-2 pt-2">
         <Button type="submit">Save</Button>
       </div>
