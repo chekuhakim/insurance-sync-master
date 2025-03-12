@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { DataTable } from "@/components/ui/data-table";
 import { Badge } from "@/components/ui/badge";
@@ -34,13 +33,12 @@ const SiteTable = () => {
       
       if (error) throw error;
       
-      // Convert Supabase UUID to numeric IDs for compatibility with existing code
-      const formattedSites = data.map((site, index) => ({
+      const formattedSites: Site[] = data.map((site, index) => ({
         id: index + 1,
         name: site.name,
         address: site.address,
         insuranceGroupId: site.insurance_group_id ? parseInt(site.insurance_group_id.toString().replace(/\D/g, '').slice(-1)) : 0,
-        originalId: site.id // Keep the original UUID for Supabase operations
+        originalId: site.id // This is now valid with the updated Site type
       }));
       
       setSites(formattedSites);
@@ -60,12 +58,11 @@ const SiteTable = () => {
       
       if (error) throw error;
       
-      // Convert Supabase data to the format expected by the application
-      const formattedGroups = data.map((group, index) => ({
+      const formattedGroups: InsuranceGroup[] = data.map((group, index) => ({
         id: index + 1,
         provider: group.provider,
         endDate: new Date(group.end_date),
-        originalId: group.id // Keep the original UUID for Supabase operations
+        originalId: group.id // This is now valid with the updated InsuranceGroup type
       }));
       
       setInsuranceGroups(formattedGroups);
@@ -78,7 +75,6 @@ const SiteTable = () => {
   const handleSave = async (site: Site) => {
     try {
       if (editingSite) {
-        // Update existing site
         const { error } = await supabase
           .from('sites')
           .update({
@@ -93,12 +89,11 @@ const SiteTable = () => {
         
         setSites(sites.map(s => s.id === site.id ? {
           ...site,
-          originalId: editingSite.originalId
+          originalId: editingSite.originalId // Preserve the originalId
         } : s));
         
         toast.success('Site updated successfully');
       } else {
-        // Add new site
         const { data, error } = await supabase
           .from('sites')
           .insert({
@@ -115,7 +110,7 @@ const SiteTable = () => {
         setSites([...sites, { 
           ...site, 
           id: newId,
-          originalId: data[0].id
+          originalId: data[0].id // Add the new Supabase UUID
         }]);
         
         toast.success('Site added successfully');
@@ -131,7 +126,7 @@ const SiteTable = () => {
   const handleDelete = async (id: number) => {
     try {
       const siteToDelete = sites.find(site => site.id === id);
-      if (!siteToDelete) return;
+      if (!siteToDelete || !siteToDelete.originalId) return;
       
       const { error } = await supabase
         .from('sites')
