@@ -18,14 +18,14 @@ const SiteTable = () => {
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  
-useEffect(() => {
-  const fetchData = async () => {
-    await fetchInsuranceGroups(); // Fetch insurance groups first
-    await fetchSites(); // Then fetch sites
-  };
-  fetchData();
-}, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await fetchInsuranceGroups(); // Fetch insurance groups first
+      await fetchSites(); // Then fetch sites
+    };
+    fetchData();
+  }, []);
 
   const fetchSites = async () => {
     try {
@@ -73,6 +73,7 @@ useEffect(() => {
       }));
 
       setInsuranceGroups(formattedGroups);
+      console.log('Fetched insurance groups:', formattedGroups); // Debug log
     } catch (error: any) {
       console.error('Error fetching insurance groups:', error);
       toast.error('Failed to load insurance groups');
