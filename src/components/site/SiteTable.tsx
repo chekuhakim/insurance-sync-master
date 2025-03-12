@@ -34,12 +34,12 @@ const SiteTable = () => {
   const columns = [
     {
       header: "Site Name",
-      accessorKey: "name",
+      accessorKey: "name" as keyof Site,
       enableSorting: true,
     },
     {
       header: "Address",
-      accessorKey: "address",
+      accessorKey: "address" as keyof Site,
       enableSorting: true,
     },
     {

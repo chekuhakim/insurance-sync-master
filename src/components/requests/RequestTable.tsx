@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { InsuranceRequest, formatDate, mockRequests } from "@/lib/data";
 import { CheckCircle, XCircle, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -50,23 +52,23 @@ const RequestTable = () => {
   const columns = [
     {
       header: "ID",
-      accessorKey: "id",
+      accessorKey: "id" as keyof InsuranceRequest,
       enableSorting: true,
       className: "w-[80px]",
     },
     {
       header: "Site Name",
-      accessorKey: "siteName",
+      accessorKey: "siteName" as keyof InsuranceRequest,
       enableSorting: true,
     },
     {
       header: "Address",
-      accessorKey: "address",
+      accessorKey: "address" as keyof InsuranceRequest,
       enableSorting: true,
     },
     {
       header: "Type",
-      accessorKey: "insuranceType",
+      accessorKey: "insuranceType" as keyof InsuranceRequest,
       enableSorting: true,
       className: "w-[120px]",
     },

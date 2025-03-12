@@ -50,13 +50,13 @@ const InsuranceGroupTable = () => {
   const columns = [
     {
       header: "ID",
-      accessorKey: "id",
+      accessorKey: "id" as keyof InsuranceGroup,
       enableSorting: true,
       className: "w-[80px]",
     },
     {
       header: "Insurance Provider",
-      accessorKey: "provider",
+      accessorKey: "provider" as keyof InsuranceGroup,
       enableSorting: true,
     },
     {
