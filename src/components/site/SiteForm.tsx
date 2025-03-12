@@ -9,7 +9,7 @@ interface SiteFormProps {
   site?: Site;
   insuranceGroups: InsuranceGroup[];
   onSave: (site: Site) => void;
-  onClose?: () => void; // Optional prop to close the modal
+  onClose?: () => void;
 }
 
 const SiteForm = ({ site, insuranceGroups, onSave, onClose }: SiteFormProps) => {
@@ -69,7 +69,6 @@ const SiteForm = ({ site, insuranceGroups, onSave, onClose }: SiteFormProps) => 
       insuranceGroupId: formData.insuranceGroupId,
     });
 
-    // Reset form after successful submission
     setFormData({
       name: "",
       address: "",
@@ -81,7 +80,7 @@ const SiteForm = ({ site, insuranceGroups, onSave, onClose }: SiteFormProps) => 
       insuranceGroupId: "",
     });
 
-    if (onClose) onClose(); // Close the modal if provided
+    if (onClose) onClose();
   };
 
   return (
