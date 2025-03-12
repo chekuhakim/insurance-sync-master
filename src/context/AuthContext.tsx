@@ -9,8 +9,8 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signIn: (credentials: { username: string; password: string }) => Promise<void>;
-  signUp: (credentials: { username: string; password: string }) => Promise<void>;
+  signIn: (credentials: { email: string; password: string }) => Promise<void>;
+  signUp: (credentials: { email: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -39,15 +39,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async ({ username, password }: { username: string; password: string }) => {
+  const signUp = async ({ email, password }: { email: string; password: string }) => {
     try {
       setLoading(true);
       const { error } = await supabase.auth.signUp({
-        email: `${username}@example.com`, // We still need an email format for Supabase
+        email,
         password,
         options: {
           data: {
-            username
+            email
           }
         }
       });
@@ -62,12 +62,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signIn = async ({ username, password }: { username: string; password: string }) => {
+  const signIn = async ({ email, password }: { email: string; password: string }) => {
     try {
       setLoading(true);
-      // Since Supabase requires email, we're using a pattern with the username
       const { error } = await supabase.auth.signInWithPassword({
-        email: `${username}@example.com`,
+        email,
         password
       });
 
