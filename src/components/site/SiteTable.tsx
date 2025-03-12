@@ -33,13 +33,17 @@ const SiteTable = () => {
 
       if (error) throw error;
 
-      const formattedSites: Site[] = data.map((site, index) => ({
-        id: index + 1,
-        name: site.name,
-        address: site.address,
-        insuranceGroupId: site.insurance_group_id ? parseInt(site.insurance_group_id.toString().replace(/\D/g, '').slice(-1)) : 0,
-        originalId: site.id,
-      }));
+      const formattedSites: Site[] = data.map((site, index) => {
+        // Find the insurance group by matching the UUID (insurance_group_id with originalId)
+        const matchingGroup = insuranceGroups.find(group => group.originalId === site.insurance_group_id);
+        return {
+          id: index + 1,
+          name: site.name,
+          address: site.address,
+          insuranceGroupId: matchingGroup ? matchingGroup.id : 0, // Use the frontend id
+          originalId: site.id,
+        };
+      });
 
       setSites(formattedSites);
     } catch (error: any) {
